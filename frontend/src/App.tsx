@@ -2,10 +2,11 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-do
 import Organizations from "./pages/Organizations";
 import Users from "./pages/Users";
 import Accounts from "./pages/Accounts";
+import Transactions from "./pages/Transactions";
 
 const styles = {
   container: {
-    maxWidth: "600px",
+    maxWidth: "680px",
     margin: "40px auto",
     padding: "20px",
     fontFamily: "'Inter', -apple-system, sans-serif",
@@ -35,12 +36,14 @@ const styles = {
   },
 };
 
+const NAV_PAGES = ["organizations", "users", "accounts", "transactions"] as const;
+
 export default function App() {
   return (
     <BrowserRouter>
       <div style={styles.container}>
         <nav style={styles.nav}>
-          {(["organizations", "users", "accounts"] as const).map((page) => (
+          {NAV_PAGES.map((page) => (
             <NavLink
               key={page}
               to={`/${page}`}
@@ -59,6 +62,7 @@ export default function App() {
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/users" element={<Users />} />
           <Route path="/accounts" element={<Accounts />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
       </div>
     </BrowserRouter>
