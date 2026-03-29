@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Organizations from "./pages/Organizations";
 import Users from "./pages/Users";
+import Accounts from "./pages/Accounts";
 
 const styles = {
   container: {
@@ -39,30 +40,25 @@ export default function App() {
     <BrowserRouter>
       <div style={styles.container}>
         <nav style={styles.nav}>
-          <NavLink
-            to="/organizations"
-            style={({ isActive }) => ({
-              ...styles.navLink,
-              ...(isActive ? styles.navLinkActive : {}),
-            })}
-          >
-            Organizations
-          </NavLink>
-          <NavLink
-            to="/users"
-            style={({ isActive }) => ({
-              ...styles.navLink,
-              ...(isActive ? styles.navLinkActive : {}),
-            })}
-          >
-            Users
-          </NavLink>
+          {(["organizations", "users", "accounts"] as const).map((page) => (
+            <NavLink
+              key={page}
+              to={`/${page}`}
+              style={({ isActive }) => ({
+                ...styles.navLink,
+                ...(isActive ? styles.navLinkActive : {}),
+              })}
+            >
+              {page.charAt(0).toUpperCase() + page.slice(1)}
+            </NavLink>
+          ))}
         </nav>
 
         <Routes>
           <Route path="/" element={<Navigate to="/organizations" replace />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/accounts" element={<Accounts />} />
         </Routes>
       </div>
     </BrowserRouter>
