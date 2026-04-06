@@ -84,7 +84,7 @@ const styles = {
 };
 
 export default function Organizations() {
-  const { user } = useAuth();
+  useAuth(); // Verify authentication
   const [name, setName] = useState("");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,7 +93,7 @@ export default function Organizations() {
     try {
       const res = await api.get("/organizations");
       setOrganizations(res.data);
-    } catch (err) {
+    } catch {
       // Error handled silently in production
     }
   };
