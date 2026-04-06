@@ -6,28 +6,71 @@ const routes = require("./routes");
 
 const app = express();
 
-// CORS configuration
-const allowedOrigins = process.env.FRONTEND_URL 
-  ? process.env.FRONTEND_URL.split(',') 
-  : ['http://localhost:5173'];
+/**
+ * ============================
+ * CORS CONFIG (PRODUCTION SAFE)
+ * ============================
+ */
 
-app.use(cors({
+// Parse allowed origins from env
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",")
+      .map(origin => origin.trim().replace(/\/$/, "")) // remove trailing slash
+  : ["http://localhost:5173"];
+
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.) in development
-    if (!origin && process.env.NODE_ENV !== 'production') {
+    // Allow requests with no origin (Postman, curl, mobile apps)
+    if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+
+    const cleanOrigin = origin.replace(/\/$/, "");
+
+    if (allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
     }
+
+    console.error("❌ CORS blocked:", origin);
+    return callback(null, false); // don't throw error (preflight safe)
   },
-  credentials: true
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  credentials: true,
+};
+
+// Apply CORS
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options("*", cors(corsOptions));
+
+/**
+ * ============================
+ * MIDDLEWARE
+ * ============================
+ */
 
 app.use(express.json());
 
+/**
+ * ============================
+ * ROUTES
+ * ============================
+ */
+
 app.use("/api", routes);
+
+/**
+ * ============================
+ * HEALTH CHECK (OPTIONAL BUT USEFUL)
+ * ============================
+ */
+
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "LedgerFlow API running 🚀",
+  });
+});
 
 module.exports = app;
