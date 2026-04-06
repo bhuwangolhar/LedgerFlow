@@ -23,26 +23,45 @@ function generateToken(userId) {
 }
 
 async function createUserWithOrg(data) {
-  // Check if user already exists
-  const existingUser = await User.findOne({ where: { email: data.email } });
-  if (existingUser) {
-    throw new Error("Email already registered");
+  try {
+    console.log("🔍 createUserWithOrg called with:", { 
+      email: data.email, 
+      name: data.name, 
+      organization_id: data.organization_id 
+    });
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { email: data.email } });
+    if (existingUser) {
+      console.warn("⚠️  User already exists:", data.email);
+      throw new Error("Email already registered");
+    }
+
+    // Hash password
+    console.log("🔐 Hashing password...");
+    const hashedPassword = await hashPassword(data.password);
+
+    // Create user with organization_id
+    console.log("💾 Creating user in database...");
+    const user = await User.create({
+      organization_id: data.organization_id,
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      phone: data.phone,
+      company_name: data.company_name
+    });
+
+    console.log("✅ User created successfully:", user.id);
+    return user;
+  } catch (error) {
+    console.error("❌ createUserWithOrg error:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    throw error;
   }
-
-  // Hash password
-  const hashedPassword = await hashPassword(data.password);
-
-  // Create user with organization_id
-  const user = await User.create({
-    organization_id: data.organization_id,
-    name: data.name,
-    email: data.email,
-    password: hashedPassword,
-    phone: data.phone,
-    company_name: data.company_name
-  });
-
-  return user;
 }
 
 async function signup(data) {
