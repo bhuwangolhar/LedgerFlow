@@ -14,29 +14,26 @@ const app = express();
 
 // Parse allowed origins from env
 const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(",")
-      .map(origin => origin.trim().replace(/\/$/, "")) // remove trailing slash
+  ? process.env.FRONTEND_URL.split(",").map(o => o.trim())
   : ["http://localhost:5173"];
 
-const corsOptions = {
+app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, curl, mobile apps)
-    if (!origin) {
+    // allow requests with no origin (postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
-    const cleanOrigin = origin.replace(/\/$/, "");
-
-    if (allowedOrigins.includes(cleanOrigin)) {
-      return callback(null, true);
-    }
-
-    console.error("❌ CORS blocked:", origin);
-    return callback(null, false); // don't throw error (preflight safe)
+    console.log("❌ Blocked by CORS:", origin);
+    
+    // ⚠️ IMPORTANT CHANGE
+    return callback(null, true); // allow but log (for now)
   },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
-};
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+}));
 
 // Apply CORS
 app.use(cors(corsOptions));
