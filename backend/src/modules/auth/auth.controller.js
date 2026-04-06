@@ -72,12 +72,17 @@ async function signup(req, res) {
     console.error("❌ Signup error:", {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      code: error.code
     });
+    
+    // Send detailed error to client
     res.status(400).json({
       message: "Signup failed",
       error: error.message,
-      type: error.name
+      type: error.name,
+      code: error.code || "UNKNOWN_ERROR",
+      detail: process.env.NODE_ENV === "development" ? error.stack : undefined
     });
   }
 }
