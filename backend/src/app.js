@@ -76,4 +76,20 @@ app.get("/", (req, res) => {
   });
 });
 
+/**
+ * ============================
+ * 404 ERROR HANDLER
+ * (Must be after all routes)
+ * ============================
+ */
+app.use((req, res) => {
+  // CORS headers already applied by cors() middleware above
+  // This ensures even 404s return proper CORS headers
+  res.status(404).json({
+    error: "Not Found",
+    message: `Route ${req.method} ${req.path} does not exist`,
+    tip: "Routes are under /api prefix (e.g., /api/auth/signup)",
+  });
+});
+
 module.exports = app;
