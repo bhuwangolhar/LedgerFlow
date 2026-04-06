@@ -2,7 +2,11 @@ const organizationService = require("./organization.service");
 
 async function createOrganization(req, res) {
   try {
-    const org = await organizationService.createOrganization(req.body);
+    const userId = req.user.id;
+    const org = await organizationService.createOrganization({
+      ...req.body,
+      user_id: userId
+    });
 
     res.status(201).json(org);
   } catch (error) {
@@ -15,7 +19,8 @@ async function createOrganization(req, res) {
 
 async function getOrganizations(req, res) {
   try {
-    const orgs = await organizationService.getOrganizations();
+    const userId = req.user.id;
+    const orgs = await organizationService.getOrganizationsByUser(userId);
 
     res.json(orgs);
   } catch (error) {

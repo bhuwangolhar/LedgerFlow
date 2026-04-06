@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -14,6 +15,12 @@ interface User {
 }
 
 const styles = {
+  welcomeText: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#1e293b",
+    margin: "0 0 16px",
+  },
   brand: {
     fontSize: "14px",
     fontWeight: 700,
@@ -27,6 +34,13 @@ const styles = {
     fontWeight: 800,
     color: "#1e293b",
     marginTop: "4px",
+    marginBottom: "0",
+  },
+  moduleTitle: {
+    fontSize: "32px",
+    fontWeight: 800,
+    color: "#1e293b",
+    marginTop: "0px",
     marginBottom: "0",
   },
   headerSection: { marginBottom: "32px" },
@@ -118,6 +132,7 @@ const styles = {
 };
 
 export default function Users() {
+  const { user } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState("");
@@ -126,8 +141,9 @@ export default function Users() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchOrganizations = async () => {
+    if (!user?.id) return;
     try {
-      const res = await api.get("/organizations");
+      const res = await api.get("/organizations", { params: { user_id: user.id } });
       setOrganizations(res.data);
       if (res.data.length > 0) {
         setSelectedOrgId(res.data[0].id);
@@ -169,7 +185,7 @@ export default function Users() {
 
   useEffect(() => {
     fetchOrganizations();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (selectedOrgId) fetchUsers(selectedOrgId);
@@ -181,8 +197,8 @@ export default function Users() {
   return (
     <>
       <header style={styles.headerSection}>
-        <p style={styles.brand}>LedgerFlow</p>
-        <h1 style={styles.pageTitle}>Users</h1>
+        <p style={styles.brand}>LEDGERFLOW</p>
+        <h1 style={styles.moduleTitle}>Users</h1>
       </header>
 
       <div style={styles.inputGroup}>
@@ -192,9 +208,7 @@ export default function Users() {
           value={selectedOrgId}
           onChange={(e) => setSelectedOrgId(e.target.value)}
         >
-          {organizations.length === 0 && (
-            <option value="">No organizations found</option>
-          )}
+          <option value="">Select organization</option>
           {organizations.map((org) => (
             <option key={org.id} value={org.id}>
               {org.name}

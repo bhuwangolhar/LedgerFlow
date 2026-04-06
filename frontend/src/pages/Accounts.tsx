@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -24,6 +25,12 @@ const TYPE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const styles = {
+  welcomeText: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#1e293b",
+    margin: "0 0 16px",
+  },
   brand: {
     fontSize: "14px",
     fontWeight: 700,
@@ -37,6 +44,13 @@ const styles = {
     fontWeight: 800,
     color: "#1e293b",
     marginTop: "4px",
+    marginBottom: "0",
+  },
+  moduleTitle: {
+    fontSize: "32px",
+    fontWeight: 800,
+    color: "#1e293b",
+    marginTop: "0px",
     marginBottom: "0",
   },
   headerSection: { marginBottom: "32px" },
@@ -123,6 +137,7 @@ const styles = {
 };
 
 export default function Accounts() {
+  const { user } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState("");
@@ -131,8 +146,9 @@ export default function Accounts() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchOrganizations = async () => {
+    if (!user?.id) return;
     try {
-      const res = await api.get("/organizations");
+      const res = await api.get("/organizations", { params: { user_id: user.id } });
       setOrganizations(res.data);
       if (res.data.length > 0) setSelectedOrgId(res.data[0].id);
     } catch (err) {
@@ -172,7 +188,7 @@ export default function Accounts() {
 
   useEffect(() => {
     fetchOrganizations();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (selectedOrgId) fetchAccounts(selectedOrgId);
@@ -183,8 +199,8 @@ export default function Accounts() {
   return (
     <>
       <header style={styles.headerSection}>
-        <p style={styles.brand}>LedgerFlow</p>
-        <h1 style={styles.pageTitle}>Accounts</h1>
+        <p style={styles.brand}>LEDGERFLOW</p>
+        <h1 style={styles.moduleTitle}>Accounts</h1>
       </header>
 
       <div style={styles.inputGroup}>
@@ -194,9 +210,7 @@ export default function Accounts() {
           value={selectedOrgId}
           onChange={(e) => setSelectedOrgId(e.target.value)}
         >
-          {organizations.length === 0 && (
-            <option value="">No organizations found</option>
-          )}
+          <option value="">Select organization</option>
           {organizations.map((org) => (
             <option key={org.id} value={org.id}>
               {org.name}

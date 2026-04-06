@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -7,6 +8,12 @@ interface Organization {
 }
 
 const styles = {
+  welcomeText: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#1e293b",
+    margin: "0 0 16px",
+  },
   brand: {
     fontSize: "14px",
     fontWeight: 700,
@@ -20,6 +27,13 @@ const styles = {
     fontWeight: 800,
     color: "#1e293b",
     marginTop: "4px",
+    marginBottom: "0",
+  },
+  moduleTitle: {
+    fontSize: "32px",
+    fontWeight: 800,
+    color: "#1e293b",
+    marginTop: "0px",
     marginBottom: "0",
   },
   inputGroup: {
@@ -70,6 +84,7 @@ const styles = {
 };
 
 export default function Organizations() {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +94,7 @@ export default function Organizations() {
       const res = await api.get("/organizations");
       setOrganizations(res.data);
     } catch (err) {
-      console.error("Failed to fetch organizations", err);
+      // Error handled silently in production
     }
   };
 
@@ -102,8 +117,8 @@ export default function Organizations() {
   return (
     <>
       <header style={styles.headerSection}>
-        <p style={styles.brand}>LedgerFlow</p>
-        <h1 style={styles.pageTitle}>Organizations</h1>
+        <p style={styles.brand}>LEDGERFLOW</p>
+        <h1 style={styles.moduleTitle}>Organizations</h1>
       </header>
 
       <div style={styles.inputGroup}>

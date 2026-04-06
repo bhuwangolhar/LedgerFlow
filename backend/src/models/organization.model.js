@@ -10,6 +10,11 @@ const Organization = sequelize.define(
       primaryKey: true
     },
 
+    user_id: {
+      type: DataTypes.UUID,
+      allowNull: true  // Allow null during signup, will be set after user creation
+    },
+
     name: {
       type: DataTypes.STRING,
       allowNull: false

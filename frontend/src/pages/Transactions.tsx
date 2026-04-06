@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -43,6 +44,12 @@ const TYPE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const styles = {
+  welcomeText: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#1e293b",
+    margin: "0 0 16px",
+  },
   brand: {
     fontSize: "14px",
     fontWeight: 700,
@@ -56,6 +63,13 @@ const styles = {
     fontWeight: 800,
     color: "#1e293b",
     marginTop: "4px",
+    marginBottom: "0",
+  },
+  moduleTitle: {
+    fontSize: "32px",
+    fontWeight: 800,
+    color: "#1e293b",
+    marginTop: "0px",
     marginBottom: "0",
   },
   headerSection: { marginBottom: "32px" },
@@ -293,6 +307,7 @@ const styles = {
 const emptyEntry = (): EntryRow => ({ account_id: "", debit: "", credit: "" });
 
 export default function Transactions() {
+  const { user } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -307,11 +322,13 @@ export default function Transactions() {
 
   // ── Data fetching ──────────────────────────────────────────────
   useEffect(() => {
-    api.get("/organizations").then((res) => {
-      setOrganizations(res.data);
-      if (res.data.length > 0) setSelectedOrgId(res.data[0].id);
-    });
-  }, []);
+    if (user?.id) {
+      api.get("/organizations", { params: { user_id: user.id } }).then((res) => {
+        setOrganizations(res.data);
+        if (res.data.length > 0) setSelectedOrgId(res.data[0].id);
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!selectedOrgId) return;
@@ -394,8 +411,8 @@ export default function Transactions() {
   return (
     <>
       <header style={styles.headerSection}>
-        <p style={styles.brand}>LedgerFlow</p>
-        <h1 style={styles.pageTitle}>Transactions</h1>
+        <p style={styles.brand}>LEDGERFLOW</p>
+        <h1 style={styles.moduleTitle}>Transactions</h1>
       </header>
 
       {/* ── Form card ── */}
@@ -406,7 +423,7 @@ export default function Transactions() {
           value={selectedOrgId}
           onChange={(e) => setSelectedOrgId(e.target.value)}
         >
-          {organizations.length === 0 && <option value="">No organizations found</option>}
+          <option value="">Select organization</option>
           {organizations.map((org) => (
             <option key={org.id} value={org.id}>{org.name}</option>
           ))}
