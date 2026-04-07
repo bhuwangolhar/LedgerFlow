@@ -4,85 +4,122 @@ const Organization = require("../../models/organization.model");
 async function signup(req, res) {
   try {
     console.log("📝 Signup request received:", {
-      body: req.body,
-      headers: { "content-type": req.headers["content-type"] }
+      body: { ...req.body, password: "[REDACTED]" },
     });
 
     const { name, email, password, confirmPassword, phone, company_name } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !confirmPassword || !company_name) {
-      console.warn("❌ Validation failed: Missing required fields");
       return res.status(400).json({
         message: "Missing required fields: name, email, password, confirmPassword, company_name",
-        received: { name, email, password, confirmPassword, company_name }
       });
     }
 
-    // Validate password match
     if (password !== confirmPassword) {
-      console.warn("❌ Validation failed: Passwords do not match");
-      return res.status(400).json({
-        message: "Passwords do not match"
-      });
+      return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    console.log("✅ Validation passed, creating organization...");
+    // ✅ Step 1: Hash password first
+    const hashedPassword = await authService.hashPassword(password);
 
-    // Create organization first (with user_id as null)
-    const organization = await Organization.create({
-      name: company_name,
-      user_id: null  // Will be set after user creation
+    // ✅ Step 2: Create a TEMP org with a placeholder user_id so DB constraint is satisfied
+    // We use a transaction to keep it atomic and roll back on any failure
+    const { sequelize } = require("../../db");
+
+    const result = await sequelize.transaction(async (t) => {
+      // ✅ Step 3: Create org with a dummy UUID first, update after user is created
+      // OR — simpler: create user first with a temp org_id, then create org
+      // SIMPLEST: create org without user_id by temporarily making it nullable via raw query
+      // ACTUAL FIX: create user record first using raw insert, bypassing FK temporarily
+
+      // Create a placeholder org (user_id will be updated after user creation)
+      // We pass a raw query to defer constraint check
+      const [orgResult] = await sequelize.query(
+        `INSERT INTO organizations (id, name, created_at, updated_at)
+         VALUES (gen_random_uuid(), :name, NOW(), NOW())
+         RETURNING id`,
+        {
+          replacements: { name: company_name },
+          transaction: t,
+        }
+      );
+
+      const organizationId = orgResult[0].id;
+      console.log("✅ Organization created:", organizationId);
+
+      // Check if email already taken
+      const { User } = require("../user/user.model") || {};
+      const UserModel = require("../../models/user.model");
+      const existing = await UserModel.findOne({
+        where: { email },
+        transaction: t,
+      });
+      if (existing) throw new Error("Email already registered");
+
+      // Create user with organization_id
+      const [userResult] = await sequelize.query(
+        `INSERT INTO users (id, organization_id, name, email, password, phone, company_name, created_at, updated_at)
+         VALUES (gen_random_uuid(), :org_id, :name, :email, :password, :phone, :company_name, NOW(), NOW())
+         RETURNING id, name, email, organization_id`,
+        {
+          replacements: {
+            org_id: organizationId,
+            name,
+            email,
+            password: hashedPassword,
+            phone: phone || null,
+            company_name,
+          },
+          transaction: t,
+        }
+      );
+
+      const user = userResult[0];
+      console.log("✅ User created:", user.id);
+
+      // Update org with user_id now that user exists
+      await sequelize.query(
+        `UPDATE organizations SET user_id = :user_id WHERE id = :org_id`,
+        {
+          replacements: { user_id: user.id, org_id: organizationId },
+          transaction: t,
+        }
+      );
+
+      console.log("✅ Organization updated with user_id");
+      return { user, organizationId };
     });
 
-    console.log("✅ Organization created:", organization.id);
-    console.log("✅ Creating user...");
+    const token = authService.generateToken(result.user.id);
 
-    // Create user with the organization_id
-    const user = await authService.createUserWithOrg({
-      name,
-      email,
-      password,
-      phone,
-      company_name,
-      organization_id: organization.id
-    });
+    console.log("✅ Signup complete for:", result.user.id);
 
-    console.log("✅ User created:", user.id);
-
-    // Update organization with the user_id
-    await organization.update({ user_id: user.id });
-
-    // Generate token
-    const token = authService.generateToken(user.id);
-
-    console.log("✅ Signup successful for user:", user.id);
-
-    res.status(201).json({
+    return res.status(201).json({
       message: "Signup successful",
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        organization_id: organization.id
-      }
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        organization_id: result.organizationId,
+      },
     });
   } catch (error) {
     console.error("❌ Signup error:", {
       message: error.message,
-      stack: error.stack,
       name: error.name,
-      code: error.code
+      code: error.code,
     });
-    
-    // Send detailed error to client
-    res.status(400).json({
+
+    if (error.message === "Email already registered") {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    return res.status(400).json({
       message: "Signup failed",
       error: error.message,
-      type: error.name,
       code: error.code || "UNKNOWN_ERROR",
-      detail: process.env.NODE_ENV === "development" ? error.stack : undefined
     });
   }
 }
@@ -91,21 +128,16 @@ async function signin(req, res) {
   try {
     const { email, password } = req.body;
 
-    // Validate required fields
     if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required"
-      });
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // Call auth service
     const result = await authService.signin(email, password);
-
-    res.json(result);
+    return res.json(result);
   } catch (error) {
-    res.status(401).json({
+    return res.status(401).json({
       message: "Sign in failed",
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -113,22 +145,13 @@ async function signin(req, res) {
 async function verifyToken(req, res) {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
     const decoded = authService.verifyToken(token);
-    res.json({ valid: true, userId: decoded.userId });
+    return res.json({ valid: true, userId: decoded.userId });
   } catch (error) {
-    res.status(401).json({
-      message: "Token verification failed",
-      error: error.message
-    });
+    return res.status(401).json({ message: "Token verification failed", error: error.message });
   }
 }
 
-module.exports = {
-  signup,
-  signin,
-  verifyToken
-};
+module.exports = { signup, signin, verifyToken };
