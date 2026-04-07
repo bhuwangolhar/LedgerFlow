@@ -1,4 +1,6 @@
 const authService = require("./auth.service");
+const { sequelize } = require("../../db");
+const User = require("../../models/user.model");
 const Organization = require("../../models/organization.model");
 
 async function signup(req, res) {
@@ -20,51 +22,33 @@ async function signup(req, res) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // ✅ Step 1: Hash password first
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
     const hashedPassword = await authService.hashPassword(password);
 
-    // ✅ Step 2: Create a TEMP org with a placeholder user_id so DB constraint is satisfied
-    // We use a transaction to keep it atomic and roll back on any failure
-    const { sequelize } = require("../../db");
-
     const result = await sequelize.transaction(async (t) => {
-      // ✅ Step 3: Create org with a dummy UUID first, update after user is created
-      // OR — simpler: create user first with a temp org_id, then create org
-      // SIMPLEST: create org without user_id by temporarily making it nullable via raw query
-      // ACTUAL FIX: create user record first using raw insert, bypassing FK temporarily
-
-      // Create a placeholder org (user_id will be updated after user creation)
-      // We pass a raw query to defer constraint check
-      const [orgResult] = await sequelize.query(
+      const [orgRows] = await sequelize.query(
         `INSERT INTO organizations (id, name, created_at, updated_at)
-         VALUES (gen_random_uuid(), :name, NOW(), NOW())
+         VALUES (gen_random_uuid(), :company_name, NOW(), NOW())
          RETURNING id`,
         {
-          replacements: { name: company_name },
+          replacements: { company_name },
           transaction: t,
         }
       );
 
-      const organizationId = orgResult[0].id;
-      console.log("✅ Organization created:", organizationId);
+      const orgId = orgRows[0].id;
 
-      // Check if email already taken
-      const { User } = require("../user/user.model") || {};
-      const UserModel = require("../../models/user.model");
-      const existing = await UserModel.findOne({
-        where: { email },
-        transaction: t,
-      });
-      if (existing) throw new Error("Email already registered");
-
-      // Create user with organization_id
-      const [userResult] = await sequelize.query(
+      const [userRows] = await sequelize.query(
         `INSERT INTO users (id, organization_id, name, email, password, phone, company_name, created_at, updated_at)
          VALUES (gen_random_uuid(), :org_id, :name, :email, :password, :phone, :company_name, NOW(), NOW())
          RETURNING id, name, email, organization_id`,
         {
           replacements: {
-            org_id: organizationId,
+            org_id: orgId,
             name,
             email,
             password: hashedPassword,
@@ -75,25 +59,20 @@ async function signup(req, res) {
         }
       );
 
-      const user = userResult[0];
-      console.log("✅ User created:", user.id);
+      const user = userRows[0];
 
-      // Update org with user_id now that user exists
       await sequelize.query(
         `UPDATE organizations SET user_id = :user_id WHERE id = :org_id`,
         {
-          replacements: { user_id: user.id, org_id: organizationId },
+          replacements: { user_id: user.id, org_id: orgId },
           transaction: t,
         }
       );
 
-      console.log("✅ Organization updated with user_id");
-      return { user, organizationId };
+      return { user };
     });
 
     const token = authService.generateToken(result.user.id);
-
-    console.log("✅ Signup complete for:", result.user.id);
 
     return res.status(201).json({
       message: "Signup successful",
@@ -102,7 +81,7 @@ async function signup(req, res) {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
-        organization_id: result.organizationId,
+        organization_id: result.user.organization_id,
       },
     });
   } catch (error) {
