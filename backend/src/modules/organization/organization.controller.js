@@ -19,7 +19,6 @@ async function createOrganization(req, res) {
 
 async function getOrganizations(req, res) {
   try {
-    const userId = req.user.id;
     const orgs = await organizationService.getOrganizationsByUser(userId);
 
     res.json(orgs);
