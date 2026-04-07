@@ -19,13 +19,21 @@ async function createOrganization(req, res) {
 
 async function getOrganizations(req, res) {
   try {
+    const userId = req.user?.id; // ✅ safe access
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized - user not found",
+      });
+    }
+
     const orgs = await organizationService.getOrganizationsByUser(userId);
 
     res.json(orgs);
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch organizations",
-      error: error.message
+      error: error.message,
     });
   }
 }
