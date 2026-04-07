@@ -19,29 +19,11 @@ const allowedOrigins = process.env.FRONTEND_URL
 
 // CORS configuration object
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, mobile apps, same-origin requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      // ✅ Allowed origin - return headers
-      return callback(null, true);
-    }
-
-    // ❌ NOT allowed origin - still return headers so browser receives proper rejection
-    // This prevents silent failures; browser will block the response
-    const error = new Error(`CORS policy violation: Origin ${origin} not allowed`);
-    error.status = 403;
-    console.warn("⚠️  CORS rejected:", origin, "| Allowed:", allowedOrigins);
-    return callback(error);
-  },
-  credentials: true,
+  origin: allowedOrigins,  // simple array, no function needed
+  credentials: false,       // JWT in header, no cookies
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  preflightContinue: false, // Explicitly handle preflight in middleware
-  optionsSuccessStatus: 200, // For browsers that choke on 204
+  optionsSuccessStatus: 200,
 };
 
 // Apply CORS middleware - this handles preflight automatically
