@@ -8,6 +8,13 @@ const accountRoutes = require("../modules/account/account.routes");
 const transactionRoutes = require("../modules/transaction/transaction.routes");
 const financeRoutes = require("../modules/finance/finance.routes");
 
+/**
+ * Health Check Route
+ */
+router.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 router.use("/auth", authRoutes);
 router.use("/organizations", organizationRoutes);
 router.use("/users", userRoutes);
