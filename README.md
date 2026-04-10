@@ -352,5 +352,5 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 ---
 
 *Built by **Bhuvan Golhar***
-LinkedIn: https://linkedin.com/in/bhuvangolhar
-Portfolio: https://bhuvangolhar.space
+➢ **LinkedIn**: https://linkedin.com/in/bhuvangolhar
+➢ **Portfolio**: https://bhuvangolhar.space
