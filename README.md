@@ -2,12 +2,6 @@
 
 **A double-entry accounting system made for managing core financial operations.**
 
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=white)
-![Backend](https://img.shields.io/badge/Backend-Express%205%20%2B%20Sequelize-000000?logo=express&logoColor=white)
-![Database](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql&logoColor=white)
-![Language](https://img.shields.io/badge/Language-TypeScript%20%2B%20JavaScript-3178C6?logo=typescript&logoColor=white)
-
 ---
 
 ## Overview
